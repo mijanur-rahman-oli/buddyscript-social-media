@@ -243,8 +243,29 @@ export async function toggleCommentLike(
 }
 
 export async function getCommentLikes(commentId: string) {
-  const count = await prisma.like.count({ where: { commentId } }); // Ensure your schema supports this
-  return count;
+  const likes = await prisma.like.findMany({
+    where: { 
+      commentId: commentId 
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          image: true,
+        },
+      },
+    },
+  });
+
+  // This returns the exact structure your CommentSection.tsx expects
+  return likes.map((like) => ({
+    id: like.user.id,
+    firstName: like.user.firstName,
+    lastName: like.user.lastName,
+    image: like.user.image,
+  }));
 }
 
 export async function getPostLikes(postId: string) {
