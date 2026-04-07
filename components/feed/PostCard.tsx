@@ -72,19 +72,26 @@ export function PostCard({ post: initialPost, currentUserId, currentUserImage }:
     }
   }
 
-  async function handleShowLikes() {
-    setShowLikesModal(true);
-    setIsLoadingLikes(true);
-    try {
-      const likes = await getPostLikes(post.id);
+ const handleShowLikes = async () => {
+  setShowLikesModal(true);
+  setIsLoadingLikes(true);
+  try {
+    const likes = await getPostLikes(post.id);
+    
+    // Check if 'likes' is an array before setting it. 
+    // If it's just a number, we set an empty array to prevent the crash.
+    if (Array.isArray(likes)) {
       setLikesList(likes);
-    } catch (err) {
-      console.error("Failed to load likes:", err);
-    } finally {
-      setIsLoadingLikes(false);
+    } else {
+      console.warn("getPostLikes returned a number instead of an array.");
+      setLikesList([]); 
     }
+  } catch (err) {
+    console.error("Failed to load likes:", err);
+  } finally {
+    setIsLoadingLikes(false);
   }
-
+};
   if (isDeleting) return null;
 
   return (
