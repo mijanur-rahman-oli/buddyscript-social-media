@@ -208,9 +208,38 @@ export async function deletePost(postId: string): Promise<void> {
   revalidatePath("/feed");
 }
 
-export async function toggleCommentLike(commentId: string) {
-  // Logic for toggling comment like...
+export async function toggleCommentLike(
+  commentId: string
+): Promise<{ liked: boolean; count: number }> {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  const userId = session.user.id;
+
+  // Check if like exists
+  const existing = await prisma.like.findFirst({
+    where: { userId, commentId },
+  });
+
+  if (existing) {
+    await prisma.like.delete({
+      where: { id: existing.id },
+    });
+  } else {
+    await prisma.like.create({
+      data: { userId, commentId },
+    });
+  }
+
+  // Get the updated count
+  const count = await prisma.like.count({
+    where: { commentId },
+  });
+
   revalidatePath("/feed");
+  
+  // THIS IS THE MISSING PART:
+  return { liked: !existing, count }; 
 }
 
 export async function getCommentLikes(commentId: string) {
