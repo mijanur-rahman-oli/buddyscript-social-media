@@ -4,9 +4,17 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { v2 as cloudinary } from "cloudinary";
 import type { CommentWithReplies, FeedResult, PostWithDetails } from "@/types";
 
 const POSTS_PER_PAGE = 10;
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 // ─── Recursive comment builder ────────────────────────────────────────────────
 function buildCommentTree(
@@ -15,12 +23,10 @@ function buildCommentTree(
   const commentMap = new Map<string, CommentWithReplies>();
   const roots: CommentWithReplies[] = [];
 
-  // First pass: index all comments
   for (const comment of comments) {
     commentMap.set(comment.id, { ...comment, replies: [] });
   }
 
-  // Second pass: build tree
   for (const comment of comments) {
     const node = commentMap.get(comment.id)!;
     if (comment.parentId) {
@@ -36,11 +42,71 @@ function buildCommentTree(
   return roots;
 }
 
+// ─── Upload image to Cloudinary ───────────────────────────────────────────────
+export async function uploadImage(formData: FormData): Promise<string | null> {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  const file = formData.get("image") as File;
+  if (!file || file.size === 0) return null;
+
+  const bytes = await file.arrayBuffer();
+  const buffer = Buffer.from(bytes);
+
+  const result = await new Promise((resolve, reject) => {
+    cloudinary.uploader.upload_stream(
+      {
+        folder: "buddyscript/posts",
+        transformation: [{ width: 1200, height: 1200, crop: "limit" }],
+      },
+      (error, result) => {
+        if (error) reject(error);
+        else resolve(result);
+      }
+    ).end(buffer);
+  });
+
+  return (result as any).secure_url;
+}
+
+// ─── createPost with image support ────────────────────────────────────────────
+export async function createPost(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  const text = formData.get("text") as string;
+  const visibility = (formData.get("visibility") as string) === "PRIVATE" ? "PRIVATE" : "PUBLIC";
+  const imageFile = formData.get("image") as File;
+
+  if (!text?.trim() && !imageFile) throw new Error("Post text or image is required");
+
+  let imagePath: string | null = null;
+  if (imageFile && imageFile.size > 0) {
+    const imageFormData = new FormData();
+    imageFormData.append("image", imageFile);
+    imagePath = await uploadImage(imageFormData);
+  }
+
+  const post = await prisma.post.create({
+    data: {
+      text: text?.trim() || null,
+      imagePath,
+      visibility,
+      authorId: session.user.id,
+    },
+    include: {
+      author: {
+        select: { id: true, firstName: true, lastName: true, image: true },
+      },
+      _count: { select: { comments: true, likes: true } },
+    },
+  });
+
+  revalidatePath("/feed");
+  return { success: true, post };
+}
+
 // ─── getFeedPosts ─────────────────────────────────────────────────────────────
-// Optimised for "millions of reads":
-//  - cursor-based pagination (no OFFSET)
-//  - targeted indexes on (visibility, createdAt DESC)
-//  - single DB round-trip per page load
 export async function getFeedPosts(cursor?: string): Promise<FeedResult> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
@@ -48,7 +114,7 @@ export async function getFeedPosts(cursor?: string): Promise<FeedResult> {
   const userId = session.user.id;
 
   const posts = await prisma.post.findMany({
-    take: POSTS_PER_PAGE + 1, // fetch one extra to detect hasMore
+    take: POSTS_PER_PAGE + 1,
     ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
     where: {
       OR: [{ visibility: "PUBLIC" }, { authorId: userId }],
@@ -63,7 +129,6 @@ export async function getFeedPosts(cursor?: string): Promise<FeedResult> {
       author: {
         select: { id: true, firstName: true, lastName: true, image: true },
       },
-      // Only fetch top-level comments here; replies are nested below
       comments: {
         orderBy: { createdAt: "asc" },
         select: {
@@ -88,10 +153,9 @@ export async function getFeedPosts(cursor?: string): Promise<FeedResult> {
   const trimmedPosts = hasMore ? posts.slice(0, POSTS_PER_PAGE) : posts;
   const nextCursor = hasMore ? trimmedPosts[trimmedPosts.length - 1].id : null;
 
-  // Build nested comment trees on the server
   const postsWithTrees: PostWithDetails[] = trimmedPosts.map((post) => ({
     ...post,
-    comments: buildCommentTree(post.comments as unknown as (CommentWithReplies & { parentId: string | null })[]),
+    comments: buildCommentTree(post.comments as any),
   }));
 
   return {
@@ -101,34 +165,8 @@ export async function getFeedPosts(cursor?: string): Promise<FeedResult> {
   };
 }
 
-// ─── createPost ───────────────────────────────────────────────────────────────
-export async function createPost(formData: FormData) {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("Unauthorized");
-
-  const text = formData.get("text") as string;
-  const visibility = (formData.get("visibility") as string) === "PRIVATE"
-    ? "PRIVATE"
-    : "PUBLIC";
-
-  if (!text?.trim()) throw new Error("Post text is required");
-
-  await prisma.post.create({
-    data: {
-      text: text.trim(),
-      visibility,
-      authorId: session.user.id,
-    },
-  });
-
-  revalidatePath("/feed");
-}
-
 // ─── toggleLike ───────────────────────────────────────────────────────────────
-// Used by optimistic UI — returns the NEW like count
-export async function toggleLike(
-  postId: string
-): Promise<{ liked: boolean; count: number }> {
+export async function toggleLike(postId: string): Promise<{ liked: boolean; count: number }> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
 
@@ -208,15 +246,13 @@ export async function deletePost(postId: string): Promise<void> {
   revalidatePath("/feed");
 }
 
-export async function toggleCommentLike(
-  commentId: string
-): Promise<{ liked: boolean; count: number }> {
+// ─── toggleCommentLike ────────────────────────────────────────────────────────
+export async function toggleCommentLike(commentId: string): Promise<{ liked: boolean; count: number }> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
 
   const userId = session.user.id;
 
-  // Check if like exists
   const existing = await prisma.like.findFirst({
     where: { userId, commentId },
   });
@@ -231,22 +267,18 @@ export async function toggleCommentLike(
     });
   }
 
-  // Get the updated count
   const count = await prisma.like.count({
     where: { commentId },
   });
 
   revalidatePath("/feed");
-  
-  // THIS IS THE MISSING PART:
-  return { liked: !existing, count }; 
+  return { liked: !existing, count };
 }
 
+// ─── getCommentLikes ──────────────────────────────────────────────────────────
 export async function getCommentLikes(commentId: string) {
   const likes = await prisma.like.findMany({
-    where: { 
-      commentId: commentId 
-    },
+    where: { commentId },
     include: {
       user: {
         select: {
@@ -259,7 +291,6 @@ export async function getCommentLikes(commentId: string) {
     },
   });
 
-  // This returns the exact structure your CommentSection.tsx expects
   return likes.map((like) => ({
     id: like.user.id,
     firstName: like.user.firstName,
@@ -268,7 +299,26 @@ export async function getCommentLikes(commentId: string) {
   }));
 }
 
+// ─── getPostLikes ─────────────────────────────────────────────────────────────
 export async function getPostLikes(postId: string) {
-  const count = await prisma.like.count({ where: { postId } });
-  return count;
+  const likes = await prisma.like.findMany({
+    where: { postId },
+    include: {
+      user: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          image: true,
+        },
+      },
+    },
+  });
+
+  return likes.map((like) => ({
+    id: like.user.id,
+    firstName: like.user.firstName,
+    lastName: like.user.lastName,
+    image: like.user.image,
+  }));
 }

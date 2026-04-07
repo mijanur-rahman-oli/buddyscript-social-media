@@ -87,8 +87,7 @@ export function CreatePostForm({ userImage, userName }: CreatePostFormProps) {
             </div>
           )}
         </div>
-
-        <div className="_feed_inner_text_area_box_form" style={{ flex: 1 }}>
+        <div className="_feed_inner_text_area_box_form" style={{ flex: 1, position: "relative" }}>
           <textarea
             className="form-control _textarea"
             placeholder="Write something ..."
@@ -109,7 +108,7 @@ export function CreatePostForm({ userImage, userName }: CreatePostFormProps) {
           />
           <div style={{
             position: "absolute",
-            bottom: "10px",
+            bottom: "12px",
             right: "16px",
             fontSize: "12px",
             color: "var(--bs-text-muted)",
