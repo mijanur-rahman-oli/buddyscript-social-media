@@ -5,7 +5,7 @@ import { addComment, toggleCommentLike, getCommentLikes } from "@/actions/feed.a
 import type { CommentWithReplies } from "@/types";
 import Link from "next/link";
 
-// Helper for time display
+// ─── Helper for Relative Time ────────────────────────────────────────────────
 function formatRelativeTime(date: Date): string {
   const now = new Date();
   const diffMs = now.getTime() - new Date(date).getTime();
@@ -17,7 +17,7 @@ function formatRelativeTime(date: Date): string {
   return `${Math.floor(diffHours / 24)}d`;
 }
 
-// ─── Single Comment Node ───────────────────────────────────────────────────────
+// ─── Single Comment Node (Recursive) ─────────────────────────────────────────
 function CommentNode({
   comment,
   postId,
@@ -32,19 +32,16 @@ function CommentNode({
   const [showReply, setShowReply] = useState(false);
   const [replyText, setReplyText] = useState("");
   const [isPending, startTransition] = useTransition();
-  
-  // Likes handling
   const [showLikesModal, setShowLikesModal] = useState(false);
   const [likesList, setLikesList] = useState<Array<{ id: string; firstName: string; lastName: string; image: string | null }>>([]);
   const [isLoadingLikes, setIsLoadingLikes] = useState(false);
 
-  // Optimistic state for Nested Replies
+  // Optimistic state for nested replies
   const [optimisticReplies, addOptimisticReply] = useOptimistic(
     comment.replies,
     (state, newReply: CommentWithReplies) => [...state, newReply]
   );
 
-  // Sync local state for likes (needed for immediate UI feedback on like toggle)
   const [localComment, setLocalComment] = useState(comment);
   const isLiked = localComment.likes.some((like) => like.userId === currentUserId);
 
@@ -78,11 +75,11 @@ function CommentNode({
     e.preventDefault();
     if (!replyText.trim()) return;
 
+    // Type-safe optimistic object (No updatedAt)
     const optimisticReply: CommentWithReplies = {
       id: `optimistic-${Date.now()}`,
       text: replyText,
       createdAt: new Date(),
-      updatedAt: new Date(),
       postId,
       parentId: comment.id,
       authorId: currentUserId,
@@ -146,7 +143,7 @@ function CommentNode({
                   {localComment._count.likes}
                 </button>
               )}
-              {depth < 3 && ( // Limit nesting depth to 3 levels
+              {depth < 3 && (
                 <button onClick={() => setShowReply((p) => !p)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, color: "var(--bs-text-muted)" }}>
                   Reply
                 </button>
@@ -175,18 +172,19 @@ function CommentNode({
             </form>
           )}
 
-          {/* Recursively Render Replies */}
           {optimisticReplies.map((reply) => (
             <CommentNode key={reply.id} comment={reply} postId={postId} currentUserId={currentUserId} depth={depth + 1} />
           ))}
         </div>
       </div>
 
-      {/* Likes Modal */}
       {showLikesModal && (
         <div onClick={() => setShowLikesModal(false)} style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div onClick={(e) => e.stopPropagation()} style={{ background: "var(--bs-bg-card)", borderRadius: 16, width: "90%", maxWidth: 400, maxHeight: "80%", overflow: "auto", padding: 24 }}>
-            <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20 }}>Liked by</h3>
+             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
+                <h3 style={{ fontSize: 18, fontWeight: 700 }}>Liked by</h3>
+                <button onClick={() => setShowLikesModal(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer" }}>×</button>
+             </div>
             {isLoadingLikes ? <p>Loading...</p> : likesList.map(user => (
               <Link key={user.id} href={`/profile/${user.id}`} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12, textDecoration: "none" }}>
                 <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#377DFF", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>
@@ -203,6 +201,13 @@ function CommentNode({
 }
 
 // ─── Main Comment Section ─────────────────────────────────────────────────────
+interface CommentSectionProps {
+  postId: string;
+  initialComments: CommentWithReplies[];
+  currentUserId: string;
+  currentUserImage?: string | null;
+}
+
 export function CommentSection({ postId, initialComments, currentUserId, currentUserImage }: CommentSectionProps) {
   const [commentText, setCommentText] = useState("");
   const [showAllComments, setShowAllComments] = useState(false);
@@ -210,7 +215,7 @@ export function CommentSection({ postId, initialComments, currentUserId, current
 
   const [optimisticComments, addOptimisticComment] = useOptimistic(
     initialComments,
-    (state, newComment: CommentWithReplies) => [newComment, ...state] // Newest comments first
+    (state, newComment: CommentWithReplies) => [newComment, ...state]
   );
 
   const visibleComments = showAllComments ? optimisticComments : optimisticComments.slice(0, 1);
@@ -223,7 +228,6 @@ export function CommentSection({ postId, initialComments, currentUserId, current
       id: `opt-${Date.now()}`,
       text: commentText,
       createdAt: new Date(),
-      updatedAt: new Date(),
       postId,
       parentId: null,
       authorId: currentUserId,
@@ -233,21 +237,28 @@ export function CommentSection({ postId, initialComments, currentUserId, current
       _count: { likes: 0 },
     };
 
+    const text = commentText;
     setCommentText("");
     startTransition(async () => {
       addOptimisticComment(newComment);
-      await addComment(postId, commentText);
+      try {
+        await addComment(postId, text);
+      } catch (err) {
+        console.error("Comment failed:", err);
+      }
     });
   }
 
   return (
-    <div style={{ padding: "0 24px", marginTop: 8 }}>
+    <div className="_comment_section_container" style={{ padding: "0 24px", marginTop: 8 }}>
       <form onSubmit={handleSubmit} style={{ marginBottom: 16 }}>
         <textarea
+          className="form-control"
           placeholder="Write a comment..."
           value={commentText}
           onChange={(e) => setCommentText(e.target.value)}
           disabled={isPending}
+          rows={1}
           style={{ width: "100%", background: "var(--bs-input-bg)", border: "1px solid var(--bs-border)", borderRadius: 20, padding: "8px 16px", fontSize: 13, resize: "none" }}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(e as any); } }}
         />
