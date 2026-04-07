@@ -60,7 +60,7 @@ export default async function FeedPage() {
           <div className="col-xl-3 col-lg-3 d-none d-lg-block">
             <LeftSidebar />
           </div>
-          
+
           {/* Middle Column - Feed content (appears FIRST on mobile) */}
           <div className="col-xl-6 col-lg-6 col-md-12 col-sm-12 order-1 order-lg-2">
             <div className="_layout_middle_wrap">
@@ -73,10 +73,11 @@ export default async function FeedPage() {
               </div>
             </div>
           </div>
-          
+
           {/* Right Sidebar - Appears SECOND on mobile */}
           <div className="col-xl-3 col-lg-3 col-md-12 col-sm-12 order-2 order-lg-3">
-            <RightSidebar />
+            {/* CHANGE THIS LINE BELOW */}
+            <RightSidebar currentUserId={userId} />
           </div>
         </div>
       </div>

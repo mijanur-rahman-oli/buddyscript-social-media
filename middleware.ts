@@ -1,5 +1,6 @@
 // middleware.ts
 import { auth } from "@/auth";
+export { auth as middleware } from "@/auth"
 
 export default auth((req) => {
   const { nextUrl, auth: session } = req;
@@ -24,4 +25,8 @@ export default auth((req) => {
 
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico|assets/).*)" ],
+};
+
+export const config = {
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
 };

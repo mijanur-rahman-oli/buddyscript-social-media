@@ -207,3 +207,18 @@ export async function deletePost(postId: string): Promise<void> {
   await prisma.post.delete({ where: { id: postId } });
   revalidatePath("/feed");
 }
+
+export async function toggleCommentLike(commentId: string) {
+  // Logic for toggling comment like...
+  revalidatePath("/feed");
+}
+
+export async function getCommentLikes(commentId: string) {
+  const count = await prisma.like.count({ where: { commentId } }); // Ensure your schema supports this
+  return count;
+}
+
+export async function getPostLikes(postId: string) {
+  const count = await prisma.like.count({ where: { postId } });
+  return count;
+}
