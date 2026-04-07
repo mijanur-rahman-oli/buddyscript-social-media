@@ -82,7 +82,6 @@ function CommentNode({
       createdAt: new Date(),
       postId,
       parentId: comment.id,
-      authorId: currentUserId,
       author: {
         id: currentUserId,
         firstName: "You",
@@ -230,7 +229,6 @@ export function CommentSection({ postId, initialComments, currentUserId, current
       createdAt: new Date(),
       postId,
       parentId: null,
-      authorId: currentUserId,
       author: { id: currentUserId, firstName: "You", lastName: "", image: currentUserImage ?? null },
       replies: [],
       likes: [],
