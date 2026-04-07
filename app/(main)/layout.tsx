@@ -12,28 +12,23 @@ export default async function MainLayout({
 }) {
   const session = await auth();
 
-  if (!session?.user) {
+  if (!session?.user?.id) {
     redirect("/login");
   }
 
+  // TypeScript narrowing: after redirect(), session.user is guaranteed non-null
   const user = {
-    id: session.user.id,
-    name: session.user.name ?? null,
-    image: session.user.image ?? null,
+    id: session.user!.id,
+    name: session.user!.name ?? null,
+    image: session.user!.image ?? null,
   };
 
   return (
     <div className="_layout _layout_main_wrapper">
       <ThemeSwitcher />
       <div className="_main_layout">
-        {/* Desktop Navbar - hide on mobile */}
-        <div className="d-none d-lg-block">
-          <Navbar user={user} />
-        </div>
-        {/* Mobile Nav - show only on mobile */}
-        <div className="d-lg-none">
-          <MobileNav />
-        </div>
+        <Navbar user={user} />
+        <MobileNav />
         {children}
       </div>
     </div>

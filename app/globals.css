@@ -1147,3 +1147,183 @@ html.dark ._layout_change_btn_ic1 { display: none; }
 .mb-lg-0 { margin-bottom: 0 !important; }
 .d-flex  { display: flex !important; }
 .align-items-center { align-items: center !important; }
+
+/* Add these to your globals.css if not already present */
+
+._social_login_left_logo {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+._left_logo {
+  height: 32px;
+  width: auto;
+}
+
+._social_login_content_para {
+  font-size: 12px;
+  color: var(--bs-text-muted);
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+._social_login_content_title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--bs-text-primary);
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+._social_login_content_btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--bs-input-bg);
+  border: 1px solid var(--bs-border);
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--bs-text-primary);
+  cursor: pointer;
+  margin-bottom: 20px;
+}
+
+._social_login_content_btn:hover {
+  background: var(--bs-border);
+}
+
+._google_img {
+  width: 18px;
+  height: 18px;
+}
+
+._social_login_content_bottom_txt {
+  position: relative;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+._social_login_content_bottom_txt span {
+  background: var(--bs-bg-card);
+  padding: 0 10px;
+  font-size: 12px;
+  color: var(--bs-text-muted);
+  position: relative;
+  z-index: 1;
+}
+
+._social_login_content_bottom_txt::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--bs-border);
+  z-index: 0;
+}
+
+._social_login_form_input {
+  margin-bottom: 14px;
+}
+
+._social_login_label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--bs-text-secondary);
+  margin-bottom: 6px;
+}
+
+._social_login_input {
+  width: 100%;
+  background: var(--bs-input-bg);
+  border: 1px solid var(--bs-border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--bs-text-primary);
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+._social_login_input:focus {
+  border-color: var(--bs-accent);
+  box-shadow: 0 0 0 2px rgba(55,125,255,.1);
+}
+
+._social_login_form_check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+._social_login_form_check_input {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+._social_login_form_check_label {
+  font-size: 12px;
+  color: var(--bs-text-secondary);
+  cursor: pointer;
+}
+
+._social_login_form_btn {
+  margin-top: 25px;
+  margin-bottom: 35px;
+}
+
+._social_login_form_btn_link {
+  width: 100%;
+  background: var(--bs-accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+._social_login_form_btn_link:hover:not(:disabled) {
+  background: var(--bs-accent-hover);
+}
+
+._social_login_form_btn_link:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+._social_login_bottom_txt {
+  text-align: center;
+}
+
+._social_login_bottom_txt_para {
+  font-size: 12px;
+  color: var(--bs-text-muted);
+  margin: 0;
+}
+
+._social_login_bottom_txt_para a {
+  color: var(--bs-accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+._auth_error {
+  background: rgba(255,71,87,.1);
+  border: 1px solid rgba(255,71,87,.3);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #ff4757;
+  margin-bottom: 16px;
+}

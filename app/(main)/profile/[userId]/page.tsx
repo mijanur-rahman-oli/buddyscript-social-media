@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { PostCard } from "@/components/feed/PostCard";
 import type { Metadata } from "next";
+import type { PostWithDetails } from "@/types";
 
 interface ProfilePageProps {
   params: Promise<{ userId: string }>;
@@ -175,7 +176,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
               posts.map((post) => (
                 <PostCard
                   key={post.id}
-                  post={post as any}
+                  post={post as unknown as PostWithDetails}
                   currentUserId={currentUserId}
                   currentUserImage={session.user.image ?? null}
                 />

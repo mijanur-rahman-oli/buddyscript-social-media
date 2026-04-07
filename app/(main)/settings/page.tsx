@@ -3,7 +3,6 @@
 
 import { useState } from "react";
 import { useTheme } from "@/components/providers/ThemeProvider";
-import type { Metadata } from "next";
 
 export default function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
@@ -22,7 +21,7 @@ export default function SettingsPage() {
 
           {/* Appearance */}
           <section style={{ marginBottom: 32 }}>
-            <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, color: "var(--muted-color)", textTransform: "uppercase", letterSpacing: "0.05em", fontSize: 12 }}>
+            <h2 style={{ fontSize: 12, fontWeight: 600, marginBottom: 16, color: "var(--muted-color)", textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>
               Appearance
             </h2>
             <div
